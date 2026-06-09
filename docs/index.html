@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monte Carlo Risk Engine — multi-backend (Serial · OpenMP · CUDA)</title>
+  <meta name="description" content="A multi-backend Monte Carlo risk engine for correlated multi-asset portfolios: Serial, OpenMP and CUDA, with VaR / CVaR estimation." />
+  <style>
+    :root {
+      --bg:#08111f; --panel:#10203a; --ink:#eef4ff; --muted:#93a7c8;
+      --accent:#22d3ee; --accent2:#34d399; --line:#1e3454; --code:#0a1830;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+      background:radial-gradient(1200px 600px at 75% -10%,#15315a 0%,var(--bg) 55%); color:var(--ink); line-height:1.6; }
+    .wrap { max-width:900px; margin:0 auto; padding:0 24px; }
+    header { padding:84px 0 40px; text-align:center; }
+    .badge { display:inline-block; font-size:12px; letter-spacing:.12em; text-transform:uppercase;
+      color:var(--accent); border:1px solid var(--line); border-radius:999px; padding:5px 14px; margin-bottom:20px; }
+    h1 { font-size:46px; margin:0 0 12px; letter-spacing:-1.2px; }
+    .tag { font-size:19px; color:var(--muted); max-width:680px; margin:0 auto 26px; }
+    .cta a { display:inline-block; margin:6px; padding:12px 22px; border-radius:10px; text-decoration:none; font-weight:600; font-size:15px; }
+    .cta .primary { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#04122e; }
+    .cta .ghost { border:1px solid var(--line); color:var(--ink); }
+    .metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:16px; margin:36px 0; }
+    .metric { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; text-align:center; }
+    .metric .n { font-size:30px; font-weight:700; color:var(--accent); }
+    .metric .l { font-size:13px; color:var(--muted); margin-top:4px; }
+    section { padding:34px 0; border-top:1px solid var(--line); }
+    h2 { font-size:25px; margin:0 0 16px; letter-spacing:-.5px; }
+    p.lead { color:var(--muted); }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 20px; }
+    .card h3 { margin:0 0 8px; font-size:16px; color:var(--accent); }
+    .card p { margin:0; font-size:14px; color:var(--muted); }
+    pre { background:var(--code); border:1px solid var(--line); border-radius:12px; padding:18px; overflow-x:auto; font-size:13.5px; color:#d7e6ff; }
+    code { font-family:ui-monospace,"SF Mono",Menlo,monospace; }
+    img.shot { width:100%; border:1px solid var(--line); border-radius:12px; background:#fff; margin-top:8px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; margin-top:10px; }
+    th,td { padding:9px 12px; border-bottom:1px solid var(--line); text-align:right; }
+    th:first-child,td:first-child { text-align:left; }
+    th { color:var(--accent); font-weight:600; }
+    .note { background:rgba(52,211,153,.08); border:1px solid #245; border-radius:12px; padding:14px 18px; font-size:14px; color:var(--muted); }
+    footer { text-align:center; color:var(--muted); padding:48px 0; font-size:13px; }
+    a { color:var(--accent); }
+    @media (max-width:640px){ h1{font-size:34px;} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="badge">Clean-room rebuild · C / OpenMP / CUDA · MIT</span>
+      <h1>Monte Carlo Risk Engine</h1>
+      <p class="tag">A multi-backend Monte Carlo engine that prices a portfolio of
+        <strong>correlated assets</strong> under geometric Brownian motion and estimates
+        <strong>Value-at-Risk</strong> and <strong>Expected Shortfall</strong> — with Serial,
+        OpenMP and CUDA backends sharing one model for guaranteed numerical consistency.</p>
+      <div class="cta">
+        <a class="primary" href="https://github.com/andreaisabelmontana/gpu-montecarlo-risk-rebuild">View on GitHub →</a>
+        <a class="ghost" href="https://github.com/andreaisabelmontana/gpu-montecarlo-risk-rebuild#quick-start">Quick start</a>
+      </div>
+    </header>
+
+    <div class="metrics">
+      <div class="metric"><div class="n">~80M</div><div class="l">sims/sec (OpenMP, 16 threads)</div></div>
+      <div class="metric"><div class="n">10×</div><div class="l">OpenMP vs NumPy baseline</div></div>
+      <div class="metric"><div class="n">3</div><div class="l">independent backends, one VaR</div></div>
+      <div class="metric"><div class="n">5</div><div class="l">correlated assets (Cholesky)</div></div>
+    </div>
+
+    <section>
+      <h2>Measured throughput</h2>
+      <p class="lead">Benchmarked on a 16-thread CPU at 2,000,000 simulations. All
+        backends agree on VaR/CVaR to within Monte Carlo noise — the proof the
+        parallelism didn't change the math.</p>
+      <img class="shot" src="throughput.png" alt="Throughput comparison chart" />
+      <table>
+        <tr><th>Backend</th><th>Threads</th><th>sims/sec</th><th>Speedup</th><th>VaR 95%</th><th>CVaR 95%</th></tr>
+        <tr><td>python-numpy</td><td>1</td><td>6.9M</td><td>1.0×</td><td>641.6</td><td>837.1</td></tr>
+        <tr><td>serial (C)</td><td>1</td><td>11.1M</td><td>1.6×</td><td>639.7</td><td>835.1</td></tr>
+        <tr><td>openmp (C)</td><td>16</td><td>64.6M</td><td>9.4×</td><td>641.2</td><td>835.5</td></tr>
+      </table>
+      <p class="note">⚙️ The <strong>CUDA backend</strong> (cuRAND Philox + Cholesky in constant
+        memory + grid-stride loop) is included and fully documented, but requires an
+        NVIDIA GPU + <code>nvcc</code> to build/run — so it is not benchmarked on this
+        AMD machine. On NVIDIA hardware it scales the same model onto thousands of threads.</p>
+    </section>
+
+    <section>
+      <h2>How it works</h2>
+      <div class="grid">
+        <div class="card"><h3>Correlated GBM</h3><p>Each asset follows geometric Brownian motion; a Cholesky factor of the correlation matrix turns i.i.d. normals into correlated shocks.</p></div>
+        <div class="card"><h3>VaR &amp; CVaR</h3><p>Simulate terminal portfolio loss across millions of paths; VaR is the tail quantile, CVaR the mean beyond it.</p></div>
+        <div class="card"><h3>Shared hot path</h3><p>The single-path simulation is one inline function reused by every backend — they differ only in how they parallelize the loop.</p></div>
+        <div class="card"><h3>Independent RNGs</h3><p>xoshiro256** per CPU thread, Philox per CUDA thread, PCG64 in NumPy — three RNGs, one answer, model validated.</p></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Quick start</h2>
+      <pre><code># CPU backends (build anywhere with gcc)
+make                       # builds mc_serial + mc_openmp
+./mc_openmp 5000000        # 5M sims -> JSON with VaR/CVaR + throughput
+
+# benchmark every available backend + chart
+python scripts/benchmark.py
+
+# GPU backend (NVIDIA only)
+make cuda                  # nvcc -> mc_cuda</code></pre>
+      <pre><code>{"backend":"openmp","n_sims":5000000,"threads":16,
+ "sims_per_sec":74031410,"V0":5460.0,"VaR":640.57,"CVaR":835.30}</code></pre>
+    </section>
+
+    <footer>
+      Built from scratch by <a href="https://github.com/andreaisabelmontana">Andrea Montana</a> ·
+      MIT License · <a href="https://github.com/andreaisabelmontana/gpu-montecarlo-risk-rebuild">source</a>
+    </footer>
+  </div>
+</body>
+</html>
