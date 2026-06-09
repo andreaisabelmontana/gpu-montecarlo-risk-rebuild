@@ -11,9 +11,8 @@ implemented across four backends — **NumPy, Serial C, OpenMP C, and CUDA** —
 you can see exactly what parallelism buys you, with the guarantee that every
 backend lands on the same risk numbers.
 
-> A clean-room rebuild, written from scratch to learn HPC patterns for
-> financial Monte Carlo (Cholesky correlation, parallel RNG streams, CUDA
-> occupancy). Not a fork.
+> Built from scratch to explore HPC patterns for financial Monte Carlo
+> (Cholesky correlation, parallel RNG streams, CUDA occupancy).
 
 > **Hardware note:** this was developed and benchmarked on an AMD/CPU machine,
 > so the **CUDA backend is written faithfully and fully documented but not run
